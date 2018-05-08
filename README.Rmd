@@ -1,0 +1,39 @@
+---
+title: gpw-tiles
+output: github_document
+---
+
+Transparent TMS raster tiles of the [Gridded Population of the World](http://sedac.ciesin.columbia.edu/data/set/gpw-v4-population-density-rev10) 30 arc-second population density dataset for 2015, created using [gdal2tiles.py](http://www.gdal.org/gdal2tiles.html).
+
+> Center for International Earth Science Information Network - CIESIN - Columbia University. 2017. Gridded Population of the World, Version 4 (GPWv4): Population Density, Revision 10. Palisades, NY: NASA Socioeconomic Data and Applications Center (SEDAC). <https://doi.org/10.7927/H4DZ068D>. Accessed 8 May 2018.
+
+The purpose of the tiles is to be used in my [borders](https://kevinstadler.github.io/borders/) web map project, so the original data is transformed in two ways:
+
+1. Population density is truncated from its original floating-point maximum of 55189 inhabitants/km² down to the byte-resolution [0,255] range. While this leads to significant loss of information about population density in urban cores, the data still captures the visually more relevant progression from uninhabited over rural to urban (see histograms below as well as Figure 4 in [this article](http://www.newgeography.com/content/004349-from-jurisdictional-functional-analysis-urban-cores-suburbs)).
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, cache=TRUE, fig.path="")
+library(raster)
+```
+
+```{r alpha}
+r <- raster("densityalpha.tif")
+h <- hist(r, maxpixels=ncell(r), breaks=0:256, plot=FALSE)
+```
+
+```{r histogram, fig.height=7, fig.width=6}
+h$xname <- "Human population density (inhabitants/km²)"
+oh <- h
+oh$counts <- c(167039170, 9236653, 2571423, 1218829, 681912, 423321, 278338, 173996, 129217, 101041, 74227, 62863, 48274, 38356, 29378, 27383, 21720, 20579, 19254, 14619, 13986, 13535, 9618, 10672, 10911, 10005, 8771, 5727, 5356, 5804, 4961, 4237, 3951, 4318, 3411, 3633, 2549, 3424, 2873, 1955, 3426, 2171, 2627, 1877, 2047, 2333, 2159, 1496, 1625, 1315, 1476, 1703, 1528, 1173, 1267, 1256, 1062, 1406, 962, 1804, 1029, 864, 808, 1422, 771, 613, 633, 828, 762, 720, 826, 469, 574, 537, 695, 456, 555, 440, 691, 694, 394, 460, 364, 421, 365, 297, 357, 242, 385, 251, 231, 427, 328, 352, 594, 215, 209, 215, 298, 192, 264, 217, 178, 317, 211, 194, 165, 189, 396, 419, 283, 148, 156, 189, 119, 103, 99, 162, 92, 132, 269, 280, 92, 149, 90, 550, 101, 75, 314, 90, 87, 111, 94, 79, 88, 300, 107, 60, 123, 101, 82, 92, 48, 81, 50, 49, 49, 81, 95, 57, 46, 35, 52, 48, 40, 25, 48, 44, 81, 27, 37, 49, 35, 32, 34, 40, 47, 28, 45, 40, 77, 33, 113, 38, 33, 24, 41, 38, 46, 21, 37, 25, 27, 31, 40, 22, 18, 30, 23, 32, 28, 19, 24, 33, 136, 29, 27, 15, 31, 30, 29, 24, 6, 22, 36, 22, 30, 18, 22, 11, 27, 13, 19, 37, 21, 28, 22, 18, 19, 17, 24, 22, 12, 19, 14, 15, 12, 12, 17, 9, 12, 5, 13, 10, 16, 23, 9, 9, 75, 10, 10, 17, 9, 18, 14, 11, 17, 9, 7, 11, 14, 9, 11, 8, 12, 942)
+oh$breaks <- seq(-108.214, 55297.4, length.out=length(oh$counts)+1)
+oh$density <- oh$counts / diff(oh$breaks)
+
+h$counts <- h$counts / sum(h$counts)
+oh$counts <- oh$counts / sum(oh$counts)
+par(mfrow=c(2, 1))
+plot(oh, main="Original GPW data", ylab="Relative frequency")
+plot(h, main="Byte-truncated tile data", ylab="Relative frequency")
+```
+
+
+2. To save on having to do client-side reprojection, the original EPSG:4326 grid is reprojected to create EPSG:3857 (Web Mercator) tiles.
